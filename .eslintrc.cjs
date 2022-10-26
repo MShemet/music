@@ -23,6 +23,7 @@ module.exports = {
       {
         singleQuote: true,
         singleAttributePerLine: true,
+        endOfLine: 'auto',
       },
     ],
   },
