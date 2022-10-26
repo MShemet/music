@@ -7,6 +7,16 @@ const modalStore = useModalStore();
 const { hiddenClass, isOpen: modalVisibility } = storeToRefs(modalStore);
 
 const tab = ref('login');
+
+const schema = {
+  name: 'required',
+  email: '',
+  age: '',
+  password: '',
+  confirm_password: '',
+  country: '',
+  tos: '',
+};
 </script>
 
 <template>
@@ -106,14 +116,22 @@ const tab = ref('login');
           </form>
 
           <!-- Registration Form -->
-          <form v-show="tab === 'register'">
+          <vee-form
+            v-show="tab === 'register'"
+            :validation-schema="schema"
+          >
             <!-- Name -->
             <div class="mb-3">
               <label class="inline-block mb-2">Name</label>
-              <input
+              <vee-field
                 type="text"
                 class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
                 placeholder="Enter Name"
+                name="name"
+              />
+              <ErrorMessage
+                class="text-red-600"
+                name="name"
               />
             </div>
 
@@ -183,7 +201,7 @@ const tab = ref('login');
             >
               Submit
             </button>
-          </form>
+          </vee-form>
         </div>
       </div>
     </div>
