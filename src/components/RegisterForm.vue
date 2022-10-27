@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { addDoc } from 'firebase/firestore';
-import { auth, usersCollection } from '@/includes/firebase';
+
+import useUserStore from '@/stores/user';
+
+const userStore = useUserStore();
 
 const schema = {
   name: 'required|min:3|max:100|alpha_spaces',
@@ -29,29 +30,8 @@ const register = async function submitRegisterForm(values) {
   reg_alert_variant.value = 'bg-blue-500';
   reg_alert_msg.value = 'Please wait! Your account is being created.';
 
-  let userCred;
-
   try {
-    userCred = await createUserWithEmailAndPassword(
-      auth,
-      values.email,
-      values.password
-    );
-  } catch (error) {
-    reg_in_submition.value = false;
-    reg_alert_variant.value = 'bg-red-500';
-    reg_alert_msg.value =
-      'An unexpected error occured. Please try again later.';
-    return;
-  }
-
-  try {
-    await addDoc(usersCollection, {
-      name: values.name,
-      email: values.email,
-      age: values.age,
-      country: values.country,
-    });
+    await userStore.register(values);
   } catch (error) {
     reg_in_submition.value = false;
     reg_alert_variant.value = 'bg-red-500';
