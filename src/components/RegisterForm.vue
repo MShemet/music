@@ -1,12 +1,15 @@
 <script setup>
 import { ref } from 'vue';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { addDoc } from 'firebase/firestore';
+import { auth, usersCollection } from '@/includes/firebase';
 
 const schema = {
   name: 'required|min:3|max:100|alpha_spaces',
   email: 'required|min:3|max:100|email',
   age: 'required|min_value:18|max_value:100',
   password: 'required|min:3|max:100',
-  passwords_mismatch: 'confirmed:@password',
+  confirm_password: 'passwords_mismatch:@password',
   country: 'required|country_excluded:Antarctica',
   tos: 'tos',
 };
@@ -18,13 +21,44 @@ const userData = {
 const reg_in_submition = ref(false);
 const reg_show_alert = ref(false);
 const reg_alert_variant = ref('bg-blue-500');
-const login_alert_msg = ref('Please wait! Your account is being created.');
+const reg_alert_msg = ref('Please wait! Your account is being created.');
 
-const register = function submitRegisterForm(values) {
+const register = async function submitRegisterForm(values) {
   reg_show_alert.value = true;
   reg_in_submition.value = true;
   reg_alert_variant.value = 'bg-blue-500';
   reg_alert_msg.value = 'Please wait! Your account is being created.';
+
+  let userCred;
+
+  try {
+    userCred = await createUserWithEmailAndPassword(
+      auth,
+      values.email,
+      values.password
+    );
+  } catch (error) {
+    reg_in_submition.value = false;
+    reg_alert_variant.value = 'bg-red-500';
+    reg_alert_msg.value =
+      'An unexpected error occured. Please try again later.';
+    return;
+  }
+
+  try {
+    await addDoc(usersCollection, {
+      name: values.name,
+      email: values.email,
+      age: values.age,
+      country: values.country,
+    });
+  } catch (error) {
+    reg_in_submition.value = false;
+    reg_alert_variant.value = 'bg-red-500';
+    reg_alert_msg.value =
+      'An unexpected error occured. Please try again later.';
+    return;
+  }
 
   reg_alert_variant.value = 'bg-green-500';
   reg_alert_msg.value = 'Success! Your account has been created.';
