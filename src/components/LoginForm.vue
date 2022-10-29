@@ -1,6 +1,10 @@
 <script setup>
 import { ref } from 'vue';
 
+import useUserStore from '@/stores/user';
+
+const userStore = useUserStore();
+
 const loginSchema = {
   email: 'required|min:3|max:100|email',
   password: 'required|min:3|max:100',
@@ -11,13 +15,25 @@ const login_show_alert = ref(false);
 const login_alert_variant = ref('bg-blue-500');
 const login_alert_msg = ref('Please wait! We are logging you in');
 
-const login = function submitLoginForm(values) {
+const login = async function submitLoginForm(values) {
   login_show_alert.value = true;
   login_in_submition.value = true;
   login_alert_variant.value = 'bg-blue-500';
   login_alert_msg.value = 'Please wait! We are logging you in';
+
+  try {
+    await userStore.authenticate(values);
+  } catch (error) {
+    login_in_submition.value = false;
+    login_alert_variant.value = 'bg-red-500';
+    login_alert_msg.value = 'Invalid login values.';
+    return;
+  }
+
   login_alert_variant.value = 'bg-green-500';
   login_alert_msg.value = 'Success! Your are now logged in.';
+
+  window.location.reload();
 };
 </script>
 
