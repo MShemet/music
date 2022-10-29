@@ -20,7 +20,8 @@ const toggleAuthModal = function toggleAuthModalVisibility() {
       <!-- App Name -->
       <router-link
         class="text-white font-bold uppercase text-2xl mr-4"
-        to="/"
+        :to="{ name: 'home' }"
+        exact-active-class="no-active"
       >
         Music
       </router-link>
@@ -29,7 +30,7 @@ const toggleAuthModal = function toggleAuthModalVisibility() {
         <li>
           <router-link
             class="px-2 text-white"
-            to="/about"
+            :to="{ name: 'about' }"
           >
             About
           </router-link>
@@ -50,7 +51,7 @@ const toggleAuthModal = function toggleAuthModalVisibility() {
             <li>
               <router-link
                 class="px-2 text-white"
-                to="/manage"
+                :to="{ name: 'manage' }"
               >
                 Manage
               </router-link>

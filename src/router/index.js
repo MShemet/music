@@ -18,12 +18,26 @@ const routes = [
     path: '/manage',
     name: 'manage',
     component: ManageView,
+    beforeEnter: (to, from, next) => {
+      next();
+    },
+  },
+  {
+    path: '/:catchAll(.*)*',
+    redirect: {
+      name: 'home',
+    },
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+  linkExactActiveClass: 'text-yellow-500',
+});
+
+router.beforeEach((to, from, next) => {
+  next();
 });
 
 export default router;

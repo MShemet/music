@@ -1,3 +1,20 @@
+<script>
+import useUserStore from '@/stores/user';
+
+export default {
+  name: 'ManageView',
+  beforeRouteEnter(to, from, next) {
+    const userStore = useUserStore();
+
+    if (userStore.userLoggedIn) {
+      next();
+    } else {
+      next({ name: 'home' });
+    }
+  },
+};
+</script>
+
 <template>
   <!-- Main Content -->
   <section class="container mx-auto mt-6">
