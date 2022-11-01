@@ -1,10 +1,27 @@
 <script setup>
 import { ref } from 'vue';
+import { ref as getStorageRef, uploadBytes } from 'firebase/storage';
+import { storage } from '@/includes/firebase';
 
 const isDragover = ref(false);
 
-const upload = function uploadFiles() {
+const upload = function uploadFiles($event) {
   isDragover.value = false;
+
+  const files = [...$event.dataTransfer.files];
+  console.log(files);
+  files.forEach((file) => {
+    if (file.type !== 'audio/mpeg') {
+      return;
+    }
+
+    // const storageRef = getStorageRef(storage);
+    const songsRef = getStorageRef(storage, `songs/${file.name}`);
+
+    uploadBytes(songsRef, file).then(() => {
+      console.log('Uploaded a blob or file!');
+    });
+  });
 };
 </script>
 
@@ -25,7 +42,7 @@ const upload = function uploadFiles() {
         @dragover.prevent.stop="isDragover = true"
         @dragenter.prevent.stop="isDragover = true"
         @dragleave.prevent.stop="isDragover = false"
-        @drop.prevent.stop="upload"
+        @drop.prevent.stop="upload($event)"
       >
         <h5>Drop your files here</h5>
       </div>
