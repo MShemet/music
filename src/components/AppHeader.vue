@@ -1,12 +1,24 @@
 <script setup>
+import { useRouter, useRoute } from 'vue-router';
+
 import useModalStore from '@/stores/modal';
 import useUserStore from '@/stores/user';
 
 const modalStore = useModalStore();
 const userStore = useUserStore();
+const router = useRouter();
+const route = useRoute();
 
 const toggleAuthModal = function toggleAuthModalVisibility() {
   modalStore.isOpen = !modalStore.isOpen;
+};
+
+const signout = function signoutUser() {
+  userStore.signout();
+
+  if (route.meta.requiresAuth) {
+    router.push({ name: 'home' });
+  }
 };
 </script>
 
@@ -27,17 +39,18 @@ const toggleAuthModal = function toggleAuthModalVisibility() {
       </router-link>
 
       <div class="flex flex-grow items-center">
-        <li>
-          <router-link
-            class="px-2 text-white"
-            :to="{ name: 'about' }"
-          >
-            About
-          </router-link>
-        </li>
         <!-- Primary Navigation -->
         <ul class="flex flex-row mt-1">
           <!-- Navigation Links -->
+          <li>
+            <router-link
+              class="px-2 text-white"
+              :to="{ name: 'about' }"
+            >
+              About
+            </router-link>
+          </li>
+
           <li v-if="!userStore.userLoggedIn">
             <a
               class="px-2 text-white"
@@ -47,6 +60,7 @@ const toggleAuthModal = function toggleAuthModalVisibility() {
               Login / Register
             </a>
           </li>
+
           <template v-else>
             <li>
               <router-link
@@ -60,7 +74,7 @@ const toggleAuthModal = function toggleAuthModalVisibility() {
               <a
                 class="px-2 text-white"
                 href="#"
-                @click.prevent="userStore.signout"
+                @click.prevent="signout"
               >
                 Logout
               </a>

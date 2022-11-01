@@ -3,6 +3,8 @@ import HomeView from '@/views/HomeView.vue';
 import AboutView from '@/views/AboutView.vue';
 import ManageView from '@/views/ManageView.vue';
 
+import useUserStore from '@/stores/user';
+
 const routes = [
   {
     path: '/',
@@ -21,6 +23,9 @@ const routes = [
     beforeEnter: (to, from, next) => {
       next();
     },
+    meta: {
+      requiresAuth: true,
+    },
   },
   {
     path: '/:catchAll(.*)*',
@@ -37,7 +42,18 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  next();
+  if (!to.meta.requiresAuth) {
+    next();
+    return;
+  }
+
+  const userStore = useUserStore();
+
+  if (userStore.userLoggedIn) {
+    next();
+  } else {
+    next({ name: 'home' });
+  }
 });
 
 export default router;
