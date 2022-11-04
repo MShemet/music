@@ -1,15 +1,21 @@
 <script setup>
 import { ref } from 'vue';
-import { ref as getStorageRef, uploadBytes } from 'firebase/storage';
-import { storage } from '@/includes/firebase';
+import {
+  ref as getStorageRef,
+  uploadBytesResumable,
+  addDoc,
+} from 'firebase/storage';
+
+import { storage, auth, songsCollection } from '@/includes/firebase';
 
 const isDragover = ref(false);
+const uploads = ref([]);
 
 const upload = function uploadFiles($event) {
   isDragover.value = false;
 
   const files = [...$event.dataTransfer.files];
-  console.log(files);
+
   files.forEach((file) => {
     if (file.type !== 'audio/mpeg') {
       return;
@@ -18,9 +24,50 @@ const upload = function uploadFiles($event) {
     // const storageRef = getStorageRef(storage);
     const songsRef = getStorageRef(storage, `songs/${file.name}`);
 
-    uploadBytes(songsRef, file).then(() => {
-      console.log('Uploaded a blob or file!');
-    });
+    const uploadTask = uploadBytesResumable(songsRef, file);
+
+    const uploadIndex =
+      uploads.value.push({
+        task: uploadTask,
+        current_progress: 0,
+        name: file.name,
+        variant: 'bg-blue-400',
+        icon: 'fas fs-spinner fa-spin',
+        text_class: '',
+      }) - 1;
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        uploads.value[uploadIndex].current_progress = progress;
+      },
+      (error) => {
+        uploads.value[uploadIndex].variant = 'bg-red-400';
+        uploads.value[uploadIndex].icon = 'fas fa-times';
+        uploads.value[uploadIndex].text_class = 'text-red-400';
+        console.log(error);
+      },
+      async () => {
+        const song = {
+          uid: auth.currentUser.uid,
+          display_name: auth.currentUser.displayName,
+          original_name: uploadTask.snapshot.ref.name,
+          modified_name: uploadTask.snapshot.ref.name,
+          genre: '',
+          comment_count: 0,
+        };
+
+        song.url = await uploadTask.snapshot.ref.getDownloadURL();
+
+        await addDoc(songsCollection, song);
+
+        uploads.value[uploadIndex].variant = 'bg-green-400';
+        uploads.value[uploadIndex].icon = 'fas fa-check';
+        uploads.value[uploadIndex].text_class = 'text-green-400';
+      }
+    );
   });
 };
 </script>
@@ -31,6 +78,7 @@ const upload = function uploadFiles($event) {
       <span class="card-title">Upload</span>
       <i class="fas fa-upload float-right text-green-400 text-2xl"></i>
     </div>
+
     <div class="p-6">
       <!-- Upload Dropbox -->
       <div
@@ -46,34 +94,28 @@ const upload = function uploadFiles($event) {
       >
         <h5>Drop your files here</h5>
       </div>
+
       <hr class="my-6" />
+
       <!-- Progess Bars -->
-      <div class="mb-4">
+      <div
+        class="mb-4"
+        v-for="upload in uploads"
+        :key="upload.name"
+      >
         <!-- File Name -->
-        <div class="font-bold text-sm">Just another song.mp3</div>
+        <div
+          class="font-bold text-sm"
+          :class="upload.text_class"
+        >
+          <i :class="upload.icon"></i> {{ upload.name }}
+        </div>
         <div class="flex h-4 overflow-hidden bg-gray-200 rounded">
           <!-- Inner Progress Bar -->
           <div
             class="transition-all progress-bar bg-blue-400"
-            style="width: 75%"
-          ></div>
-        </div>
-      </div>
-      <div class="mb-4">
-        <div class="font-bold text-sm">Just another song.mp3</div>
-        <div class="flex h-4 overflow-hidden bg-gray-200 rounded">
-          <div
-            class="transition-all progress-bar bg-blue-400"
-            style="width: 35%"
-          ></div>
-        </div>
-      </div>
-      <div class="mb-4">
-        <div class="font-bold text-sm">Just another song.mp3</div>
-        <div class="flex h-4 overflow-hidden bg-gray-200 rounded">
-          <div
-            class="transition-all progress-bar bg-blue-400"
-            style="width: 55%"
+            :class="upload.variant"
+            :style="{ width: upload.current_progress + '%' }"
           ></div>
         </div>
       </div>
