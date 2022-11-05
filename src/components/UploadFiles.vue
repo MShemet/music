@@ -3,8 +3,9 @@ import { ref, onBeforeUnmount } from 'vue';
 import {
   ref as getStorageRef,
   uploadBytesResumable,
-  addDoc,
+  getDownloadURL,
 } from 'firebase/storage';
+import { addDoc } from 'firebase/firestore';
 
 import { storage, auth, songsCollection } from '@/includes/firebase';
 
@@ -61,7 +62,7 @@ const upload = function uploadFiles($event) {
           comment_count: 0,
         };
 
-        song.url = await uploadTask.snapshot.ref.getDownloadURL();
+        song.url = await getDownloadURL(songsRef);
 
         await addDoc(songsCollection, song);
 

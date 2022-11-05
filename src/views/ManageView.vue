@@ -9,6 +9,11 @@ import CompositionItem from '@/components/CompositionItem.vue';
 
 const songs = ref([]);
 
+const updateSong = function updateSong(i, values) {
+  songs[i].modified_name = values.modified_name;
+  songs[i].genre = values.genre;
+};
+
 onBeforeMount(async () => {
   const q = query(songsCollection, where('uid', '==', auth.currentUser.uid));
 
@@ -47,9 +52,11 @@ onBeforeMount(async () => {
           <div class="p-6">
             <!-- Composition Items -->
             <CompositionItem
-              v-for="song in songs"
+              v-for="(song, i) in songs"
               :key="song.docID"
               :song="song"
+              :update-song="updateSong"
+              :index="i"
             />
           </div>
         </div>
