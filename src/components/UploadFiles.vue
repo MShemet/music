@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onBeforeUnmount } from 'vue';
 import {
   ref as getStorageRef,
   uploadBytesResumable,
@@ -14,7 +14,9 @@ const uploads = ref([]);
 const upload = function uploadFiles($event) {
   isDragover.value = false;
 
-  const files = [...$event.dataTransfer.files];
+  const files = $event.dataTransfer
+    ? [...$event.dataTransfer.files]
+    : [...$event.target.files];
 
   files.forEach((file) => {
     if (file.type !== 'audio/mpeg') {
@@ -70,6 +72,12 @@ const upload = function uploadFiles($event) {
     );
   });
 };
+
+onBeforeUnmount(() => {
+  uploads.value.forEach((uploadItem) => {
+    uploadItem.task.cancel();
+  });
+});
 </script>
 
 <template>
@@ -94,6 +102,12 @@ const upload = function uploadFiles($event) {
       >
         <h5>Drop your files here</h5>
       </div>
+
+      <input
+        type="file"
+        multiple
+        @change="upload($event)"
+      />
 
       <hr class="my-6" />
 
