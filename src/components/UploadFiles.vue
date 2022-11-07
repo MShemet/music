@@ -5,9 +5,16 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from 'firebase/storage';
-import { addDoc } from 'firebase/firestore';
+import { addDoc, getDoc } from 'firebase/firestore';
 
 import { storage, auth, songsCollection } from '@/includes/firebase';
+
+const props = defineProps({
+  addSong: {
+    type: Function,
+    required: true,
+  },
+});
 
 const isDragover = ref(false);
 const uploads = ref([]);
@@ -64,7 +71,10 @@ const upload = function uploadFiles($event) {
 
         song.url = await getDownloadURL(songsRef);
 
-        await addDoc(songsCollection, song);
+        const songRef = await addDoc(songsCollection, song);
+        const songSnapshot = await getDoc(songRef);
+
+        props.addSong(songSnapshot);
 
         uploads.value[uploadIndex].variant = 'bg-green-400';
         uploads.value[uploadIndex].icon = 'fas fa-check';

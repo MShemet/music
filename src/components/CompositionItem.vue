@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/includes/firebase';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db, storage } from '@/includes/firebase';
 
 const props = defineProps({
   song: {
@@ -11,6 +12,13 @@ const props = defineProps({
   updateSong: {
     type: Function,
     required: true,
+  },
+  removeSong: {
+    type: Function,
+    required: true,
+  },
+  updateUnsavedFlag: {
+    type: Function,
   },
   index: {
     type: Number,
@@ -46,10 +54,24 @@ const edit = async function submitForm(values) {
   }
 
   props.updateSong(props.index, values);
+  props.updateUnsavedFlag(false);
 
   in_submition.value = false;
   alert_variant.value = 'bg-green-500';
   alert_message.value = 'Success!';
+};
+
+const deleteSong = async function deleteSong() {
+  const songRefStorage = storageRef(
+    storage,
+    `songs/${props.song.original_name}`
+  );
+  await deleteObject(songRefStorage);
+
+  const songRefDb = doc(db, 'songs', props.song.docID);
+  await deleteDoc(songRefDb);
+
+  props.removeSong(props.index);
 };
 </script>
 
@@ -60,6 +82,7 @@ const edit = async function submitForm(values) {
 
       <button
         class="ml-1 py-1 px-2 text-sm rounded text-white bg-red-600 float-right"
+        @click="deleteSong"
       >
         <i class="fa fa-times"></i>
       </button>
@@ -92,6 +115,7 @@ const edit = async function submitForm(values) {
             class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
             placeholder="Enter Song Title"
             name="modified_name"
+            @input="updateUnsavedFlag(true)"
           />
           <ErrorMessage
             class="text-red-600"
@@ -106,6 +130,7 @@ const edit = async function submitForm(values) {
             class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
             placeholder="Enter Genre"
             name="genre"
+            @input="updateUnsavedFlag(true)"
           />
           <ErrorMessage
             class="text-red-600"

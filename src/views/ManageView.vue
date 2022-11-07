@@ -1,5 +1,6 @@
 <script setup>
 import { onBeforeMount, ref } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 
 import { query, where, getDocs } from 'firebase/firestore';
 import { auth, songsCollection } from '@/includes/firebase';
@@ -8,10 +9,28 @@ import UploadFiles from '@/components/UploadFiles.vue';
 import CompositionItem from '@/components/CompositionItem.vue';
 
 const songs = ref([]);
+const unsavedFlag = ref(false);
+
+const updateUnsavedFlag = function updateUnsavedFlag(value) {
+  unsavedFlag.value = value;
+};
 
 const updateSong = function updateSong(i, values) {
-  songs[i].modified_name = values.modified_name;
-  songs[i].genre = values.genre;
+  songs.value[i].modified_name = values.modified_name;
+  songs.value[i].genre = values.genre;
+};
+
+const removeSong = function removeSong(i) {
+  songs.value.splice(i, 1);
+};
+
+const addSong = function addSong(doc) {
+  const song = {
+    ...doc.data(),
+    docID: doc.id,
+  };
+
+  songs.value.push(song);
 };
 
 onBeforeMount(async () => {
@@ -19,14 +38,18 @@ onBeforeMount(async () => {
 
   const querySnapshot = await getDocs(q);
 
-  querySnapshot.forEach((doc) => {
-    const song = {
-      ...doc.data(),
-      docID: doc.id,
-    };
+  querySnapshot.forEach(addSong);
+});
 
-    songs.value.push(song);
-  });
+onBeforeRouteLeave((to, from, next) => {
+  if (!unsavedFlag.value) {
+    next();
+  } else {
+    const leave = confirm(
+      'You have unsaved changes. Are you sure you want to leave?'
+    );
+    next(leave);
+  }
 });
 </script>
 
@@ -35,7 +58,7 @@ onBeforeMount(async () => {
   <section class="container mx-auto mt-6">
     <div class="md:grid md:grid-cols-3 md:gap-4">
       <div class="col-span-1">
-        <UploadFiles />
+        <UploadFiles :add-song="addSong" />
       </div>
 
       <div class="col-span-2">
@@ -56,6 +79,8 @@ onBeforeMount(async () => {
               :key="song.docID"
               :song="song"
               :update-song="updateSong"
+              :remove-song="removeSong"
+              :update-unsaved-flag="updateUnsavedFlag"
               :index="i"
             />
           </div>
