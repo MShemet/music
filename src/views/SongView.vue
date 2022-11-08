@@ -12,10 +12,12 @@ import {
 } from 'firebase/firestore';
 import { db, auth, commentsCollection } from '@/includes/firebase';
 import useUserStore from '@/stores/user';
+import usePlayerStore from '@/stores/player';
 
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const playerStore = usePlayerStore();
 
 const song = ref({});
 const comments = ref([]);
@@ -138,6 +140,7 @@ onBeforeMount(async () => {
       <button
         type="button"
         class="z-50 h-24 w-24 text-3xl bg-white text-black rounded-full focus:outline-none"
+        @click="playerStore.newSong(song)"
       >
         <i class="fas fa-play"></i>
       </button>
