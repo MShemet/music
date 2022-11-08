@@ -1,12 +1,111 @@
 <script setup>
-import { onBeforeMount, ref } from 'vue';
+import { computed, onBeforeMount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/includes/firebase';
+import {
+  doc,
+  addDoc,
+  getDoc,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+} from 'firebase/firestore';
+import { db, auth, commentsCollection } from '@/includes/firebase';
+import useUserStore from '@/stores/user';
 
 const route = useRoute();
 const router = useRouter();
-const song = ref(null);
+const userStore = useUserStore();
+
+const song = ref({});
+const comments = ref([]);
+const comment_in_submition = ref(false);
+const comment_show_alert = ref(false);
+const comment_alert_variant = ref('bg-blue-500');
+const comment_alert_message = ref(
+  'Please wait! Your comment is being submitted'
+);
+
+const sort = ref('1');
+
+const sortedComments = computed(() => {
+  return [...comments.value].sort((a, b) => {
+    if (sort.value === '1') {
+      return new Date(b.datePosted) - new Date(a.datePosted);
+    }
+
+    return new Date(a.datePosted) - new Date(b.datePosted);
+  });
+});
+
+const schema = {
+  comment: 'required|min:3',
+};
+
+const getComments = async function getComments() {
+  const q = query(commentsCollection, where('sid', '==', route.params.id));
+
+  const querySnapshot = await getDocs(q);
+
+  querySnapshot.forEach((doc) => {
+    comments.value.push({
+      ...doc.data(),
+      docID: doc.id,
+    });
+  });
+};
+
+const addComment = async function addComment(values, { resetForm }) {
+  comment_in_submition.value = true;
+  comment_show_alert.value = true;
+  comment_alert_variant.value = 'bg-blue-500';
+  comment_alert_message.value = 'Please wait! Your comment is being submitted';
+
+  const comment = {
+    content: values.comment,
+    datePosted: new Date().toString(),
+    sid: route.params.id,
+    name: auth.currentUser.displayName,
+    uid: auth.currentUser.uid,
+  };
+
+  try {
+    await addDoc(commentsCollection, comment);
+
+    song.value.comment_count += 1;
+
+    const songRef = doc(db, 'songs', route.params.id);
+
+    await updateDoc(songRef, {
+      comment_count: song.value.comment_count,
+    });
+
+    await getComments();
+  } catch (error) {
+    comment_in_submition.value = false;
+    comment_alert_variant.value = 'bg-red-500';
+    comment_alert_message.value = 'Something went wrong! Try again later.';
+    return;
+  }
+
+  comment_in_submition.value = false;
+  comment_alert_variant.value = 'bg-green-500';
+  comment_alert_message.value = 'Comment added!';
+
+  resetForm();
+};
+
+watch(sort, (newVal) => {
+  if (newVal === route.query.sort) {
+    return;
+  }
+
+  router.push({
+    query: {
+      sort: newVal,
+    },
+  });
+});
 
 onBeforeMount(async () => {
   const query = doc(db, 'songs', route.params.id);
@@ -17,7 +116,13 @@ onBeforeMount(async () => {
     return;
   }
 
+  const { sort: qSort } = route.query;
+
+  sort.value = qSort === '1' || qSort === '2' ? qSort : '1';
+
   song.value = docSnapshot.data();
+
+  getComments();
 });
 </script>
 
@@ -43,29 +148,49 @@ onBeforeMount(async () => {
       </div>
     </div>
   </section>
+
   <!-- Form -->
   <section class="container mx-auto mt-6">
     <div class="bg-white rounded border border-gray-200 relative flex flex-col">
       <div class="px-6 pt-6 pb-5 font-bold border-b border-gray-200">
         <!-- Comment Count -->
-        <span class="card-title">Comments (15)</span>
+        <span class="card-title">Comments ({{ song.comment_count }})</span>
         <i class="fa fa-comments float-right text-green-400 text-2xl"></i>
       </div>
       <div class="p-6">
-        <form>
-          <textarea
+        <div
+          class="text-white text-center font-bold p-4 mb-4"
+          v-if="comment_show_alert"
+          :class="comment_alert_variant"
+        >
+          {{ comment_alert_message }}
+        </div>
+        <vee-form
+          v-if="userStore.userLoggedIn"
+          :validation-schema="schema"
+          @submit="addComment"
+        >
+          <vee-field
             class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded mb-4"
             placeholder="Your comment here..."
-          ></textarea>
+            as="textarea"
+            name="comment"
+          ></vee-field>
+          <ErrorMessage
+            class="text-red-600"
+            name="comment"
+          />
           <button
             type="submit"
             class="py-1.5 px-3 rounded text-white bg-green-600 block"
+            :disabled="comment_in_submition"
           >
             Submit
           </button>
-        </form>
+        </vee-form>
         <!-- Sort Comments -->
         <select
+          v-model="sort"
           class="block mt-4 py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
         >
           <option value="1">Latest</option>
@@ -74,79 +199,21 @@ onBeforeMount(async () => {
       </div>
     </div>
   </section>
+
   <!-- Comments -->
   <ul class="container mx-auto">
-    <li class="p-6 bg-gray-50 border border-gray-200">
+    <li
+      v-for="comment in sortedComments"
+      :key="comment.docID"
+      class="p-6 bg-gray-50 border border-gray-200"
+    >
       <!-- Comment Author -->
       <div class="mb-5">
-        <div class="font-bold">Elaine Dreyfuss</div>
-        <time>5 mins ago</time>
+        <div class="font-bold">{{ comment.name }}</div>
+        <time>{{ comment.datePosted }}</time>
       </div>
 
-      <p>
-        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium der doloremque laudantium.
-      </p>
-    </li>
-    <li class="p-6 bg-gray-50 border border-gray-200">
-      <!-- Comment Author -->
-      <div class="mb-5">
-        <div class="font-bold">Elaine Dreyfuss</div>
-        <time>5 mins ago</time>
-      </div>
-
-      <p>
-        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium der doloremque laudantium.
-      </p>
-    </li>
-    <li class="p-6 bg-gray-50 border border-gray-200">
-      <!-- Comment Author -->
-      <div class="mb-5">
-        <div class="font-bold">Elaine Dreyfuss</div>
-        <time>5 mins ago</time>
-      </div>
-
-      <p>
-        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium der doloremque laudantium.
-      </p>
-    </li>
-    <li class="p-6 bg-gray-50 border border-gray-200">
-      <!-- Comment Author -->
-      <div class="mb-5">
-        <div class="font-bold">Elaine Dreyfuss</div>
-        <time>5 mins ago</time>
-      </div>
-
-      <p>
-        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium der doloremque laudantium.
-      </p>
-    </li>
-    <li class="p-6 bg-gray-50 border border-gray-200">
-      <!-- Comment Author -->
-      <div class="mb-5">
-        <div class="font-bold">Elaine Dreyfuss</div>
-        <time>5 mins ago</time>
-      </div>
-
-      <p>
-        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium der doloremque laudantium.
-      </p>
-    </li>
-    <li class="p-6 bg-gray-50 border border-gray-200">
-      <!-- Comment Author -->
-      <div class="mb-5">
-        <div class="font-bold">Elaine Dreyfuss</div>
-        <time>5 mins ago</time>
-      </div>
-
-      <p>
-        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium der doloremque laudantium.
-      </p>
+      <p>{{ comment.content }}</p>
     </li>
   </ul>
 </template>
