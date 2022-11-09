@@ -9,11 +9,14 @@ export default defineStore('player', {
     };
   },
 
-  // getters: {
-  //   hiddenClass() {
-  //     return this.isOpen ? '' : 'hidden';
-  //   },
-  // },
+  getters: {
+    playing() {
+      if (this.sound.playing) {
+        return this.sound.playing();
+      }
+      return false;
+    },
+  },
 
   actions: {
     async newSong(song) {
@@ -25,6 +28,17 @@ export default defineStore('player', {
       });
 
       this.sound.play();
+    },
+    async toggleAudio() {
+      if (!this.sound.playing) {
+        return;
+      }
+
+      if (this.sound.playing()) {
+        this.sound.pause();
+      } else {
+        this.sound.play();
+      }
     },
   },
 });
