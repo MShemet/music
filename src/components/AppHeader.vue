@@ -1,8 +1,12 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 import useModalStore from '@/stores/modal';
 import useUserStore from '@/stores/user';
+import { computed } from 'vue';
+
+const { locale } = useI18n({ useScope: 'global' });
 
 const modalStore = useModalStore();
 const userStore = useUserStore();
@@ -20,6 +24,14 @@ const signout = function signoutUser() {
     router.push({ name: 'home' });
   }
 };
+
+const changeLocale = function changeLocale() {
+  locale.value = locale.value === 'fr' ? 'en' : 'fr';
+};
+
+const currentLocale = computed(() => {
+  return locale.value === 'fr' ? 'French' : 'English';
+});
 </script>
 
 <template>
@@ -80,6 +92,17 @@ const signout = function signoutUser() {
               </a>
             </li>
           </template>
+        </ul>
+        <ul class="ml-auto">
+          <li>
+            <a
+              class="px-2 text-white"
+              href="#"
+              @click.prevent="changeLocale"
+            >
+              {{ currentLocale }}
+            </a>
+          </li>
         </ul>
       </div>
     </nav>

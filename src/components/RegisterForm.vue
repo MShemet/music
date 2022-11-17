@@ -1,8 +1,10 @@
 <script setup>
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import useUserStore from '@/stores/user';
 
+const { t } = useI18n();
 const userStore = useUserStore();
 
 const schema = {
@@ -172,7 +174,13 @@ const register = async function submitRegisterForm(values) {
         value="1"
         name="tos"
       />
-      <label class="inline-block">Accept terms of service</label>
+      <i18n-t
+        class="inline-block"
+        keypath="register.accept"
+        tag="label"
+      >
+        <a href="#">{{ t('register.tos') }}</a>
+      </i18n-t>
       <ErrorMessage
         class="text-red-600"
         name="tos"

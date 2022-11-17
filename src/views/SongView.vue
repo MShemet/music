@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeMount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
   doc,
   addDoc,
@@ -13,6 +14,8 @@ import {
 import { db, auth, commentsCollection } from '@/includes/firebase';
 import useUserStore from '@/stores/user';
 import usePlayerStore from '@/stores/player';
+
+const { t, n } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
@@ -149,6 +152,7 @@ onBeforeMount(async () => {
           <!-- Song Info -->
           <div class="text-3xl font-bold">{{ song.modified_name }}</div>
           <div>{{ song.genre }}</div>
+          <div class="song-price">{{ n(1, 'currency', 'ja') }}</div>
         </div>
       </div>
     </section>
@@ -163,7 +167,15 @@ onBeforeMount(async () => {
       >
         <div class="px-6 pt-6 pb-5 font-bold border-b border-gray-200">
           <!-- Comment Count -->
-          <span class="card-title">Comments ({{ song.comment_count }})</span>
+          <span class="card-title">
+            {{
+              t(
+                'song.comment_count',
+                { count: song.comment_count },
+                song.comment_count
+              )
+            }}
+          </span>
           <i class="fa fa-comments float-right text-green-400 text-2xl"></i>
         </div>
         <div class="p-6">
