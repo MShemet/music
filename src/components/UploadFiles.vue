@@ -31,6 +31,18 @@ const upload = function uploadFiles($event) {
       return;
     }
 
+    if (!navigator.onLine) {
+      uploads.value.push({
+        task: {},
+        current_progress: 100,
+        name: file.name,
+        variant: 'bg-red-400',
+        icon: 'fas fa-times',
+        text_class: 'text-red-400',
+      });
+      return;
+    }
+
     // const storageRef = getStorageRef(storage);
     const songsRef = getStorageRef(storage, `songs/${file.name}`);
 
