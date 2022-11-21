@@ -1,5 +1,5 @@
-<script setup>
-import { computed, onBeforeMount, ref, watch } from 'vue';
+<script>
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
@@ -15,120 +15,142 @@ import { db, auth, commentsCollection } from '@/includes/firebase';
 import useUserStore from '@/stores/user';
 import usePlayerStore from '@/stores/player';
 
-const { t, n } = useI18n();
+export default {
+  async beforeRouteEnter(to, _from, next) {
+    const query = doc(db, 'songs', to.params.id);
+    const docSnapshot = await getDoc(query);
 
-const route = useRoute();
-const router = useRouter();
-const userStore = useUserStore();
-const playerStore = usePlayerStore();
-
-const song = ref({});
-const comments = ref([]);
-const comment_in_submition = ref(false);
-const comment_show_alert = ref(false);
-const comment_alert_variant = ref('bg-blue-500');
-const comment_alert_message = ref(
-  'Please wait! Your comment is being submitted'
-);
-
-const sort = ref('1');
-
-const sortedComments = computed(() => {
-  return [...comments.value].sort((a, b) => {
-    if (sort.value === '1') {
-      return new Date(b.datePosted) - new Date(a.datePosted);
+    if (!docSnapshot.exists) {
+      return next({ name: 'home' });
     }
 
-    return new Date(a.datePosted) - new Date(b.datePosted);
-  });
-});
+    next((vm) => {
+      const { sort: qSort } = to.query;
 
-const schema = {
-  comment: 'required|min:3',
-};
+      vm.sort = qSort === '1' || qSort === '2' ? qSort : '1';
 
-const getComments = async function getComments() {
-  const q = query(commentsCollection, where('sid', '==', route.params.id));
+      vm.song = docSnapshot.data();
 
-  const querySnapshot = await getDocs(q);
-
-  querySnapshot.forEach((doc) => {
-    comments.value.push({
-      ...doc.data(),
-      docID: doc.id,
+      vm.getComments();
     });
-  });
-};
+  },
+  setup() {
+    const { t, n } = useI18n();
 
-const addComment = async function addComment(values, { resetForm }) {
-  comment_in_submition.value = true;
-  comment_show_alert.value = true;
-  comment_alert_variant.value = 'bg-blue-500';
-  comment_alert_message.value = 'Please wait! Your comment is being submitted';
+    const route = useRoute();
+    const router = useRouter();
+    const userStore = useUserStore();
+    const playerStore = usePlayerStore();
 
-  const comment = {
-    content: values.comment,
-    datePosted: new Date().toString(),
-    sid: route.params.id,
-    name: auth.currentUser.displayName,
-    uid: auth.currentUser.uid,
-  };
+    const song = ref({});
+    const comments = ref([]);
+    const comment_in_submition = ref(false);
+    const comment_show_alert = ref(false);
+    const comment_alert_variant = ref('bg-blue-500');
+    const comment_alert_message = ref(
+      'Please wait! Your comment is being submitted'
+    );
 
-  try {
-    await addDoc(commentsCollection, comment);
+    const sort = ref('1');
 
-    song.value.comment_count += 1;
+    const sortedComments = computed(() => {
+      return [...comments.value].sort((a, b) => {
+        if (sort.value === '1') {
+          return new Date(b.datePosted) - new Date(a.datePosted);
+        }
 
-    const songRef = doc(db, 'songs', route.params.id);
-
-    await updateDoc(songRef, {
-      comment_count: song.value.comment_count,
+        return new Date(a.datePosted) - new Date(b.datePosted);
+      });
     });
 
-    await getComments();
-  } catch (error) {
-    comment_in_submition.value = false;
-    comment_alert_variant.value = 'bg-red-500';
-    comment_alert_message.value = 'Something went wrong! Try again later.';
-    return;
-  }
+    const schema = {
+      comment: 'required|min:3',
+    };
 
-  comment_in_submition.value = false;
-  comment_alert_variant.value = 'bg-green-500';
-  comment_alert_message.value = 'Comment added!';
+    const getComments = async function getComments() {
+      const q = query(commentsCollection, where('sid', '==', route.params.id));
 
-  resetForm();
+      const querySnapshot = await getDocs(q);
+
+      querySnapshot.forEach((doc) => {
+        comments.value.push({
+          ...doc.data(),
+          docID: doc.id,
+        });
+      });
+    };
+
+    const addComment = async function addComment(values, { resetForm }) {
+      comment_in_submition.value = true;
+      comment_show_alert.value = true;
+      comment_alert_variant.value = 'bg-blue-500';
+      comment_alert_message.value =
+        'Please wait! Your comment is being submitted';
+
+      const comment = {
+        content: values.comment,
+        datePosted: new Date().toString(),
+        sid: route.params.id,
+        name: auth.currentUser.displayName,
+        uid: auth.currentUser.uid,
+      };
+
+      try {
+        await addDoc(commentsCollection, comment);
+
+        song.value.comment_count += 1;
+
+        const songRef = doc(db, 'songs', route.params.id);
+
+        await updateDoc(songRef, {
+          comment_count: song.value.comment_count,
+        });
+
+        await getComments();
+      } catch (error) {
+        comment_in_submition.value = false;
+        comment_alert_variant.value = 'bg-red-500';
+        comment_alert_message.value = 'Something went wrong! Try again later.';
+        return;
+      }
+
+      comment_in_submition.value = false;
+      comment_alert_variant.value = 'bg-green-500';
+      comment_alert_message.value = 'Comment added!';
+
+      resetForm();
+    };
+
+    watch(sort, (newVal) => {
+      if (newVal === route.query.sort) {
+        return;
+      }
+
+      router.push({
+        query: {
+          sort: newVal,
+        },
+      });
+    });
+
+    return {
+      t,
+      n,
+      song,
+      sort,
+      userStore,
+      playerStore,
+      schema,
+      addComment,
+      getComments,
+      sortedComments,
+      comment_show_alert,
+      comment_in_submition,
+      comment_alert_variant,
+      comment_alert_message,
+    };
+  },
 };
-
-watch(sort, (newVal) => {
-  if (newVal === route.query.sort) {
-    return;
-  }
-
-  router.push({
-    query: {
-      sort: newVal,
-    },
-  });
-});
-
-onBeforeMount(async () => {
-  const query = doc(db, 'songs', route.params.id);
-  const docSnapshot = await getDoc(query);
-
-  if (!docSnapshot.exists) {
-    router.push({ name: 'home' });
-    return;
-  }
-
-  const { sort: qSort } = route.query;
-
-  sort.value = qSort === '1' || qSort === '2' ? qSort : '1';
-
-  song.value = docSnapshot.data();
-
-  getComments();
-});
 </script>
 
 <template>
