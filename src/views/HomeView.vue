@@ -1,63 +1,34 @@
 <script setup>
 import { onBeforeMount, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import {
-  query,
-  limit,
-  startAfter,
-  getDocs,
-  doc,
-  getDoc,
-  orderBy,
-} from 'firebase/firestore';
-import { songsCollection, db } from '@/includes/firebase';
 import vIconSecondary from '@/directives/icon-secondary';
 
 import SongItem from '@/components/SongItem.vue';
 
+import { getSongsRequest } from './getSongsRequest';
+
 const { t } = useI18n();
 
 const songs = ref([]);
-const maxPerPage = ref(10);
 const pendingRequest = ref(false);
 
-const getSongs = async function getSongsRequest() {
+const getSongs = async function getSongs() {
   if (pendingRequest.value) {
     return;
   }
 
   pendingRequest.value = true;
 
-  let snapshots;
+  let apiSongs;
 
   if (songs.value.length) {
-    const lastDoc = doc(db, 'songs', songs.value[songs.value.length - 1].docID);
-    const songRef = await getDoc(lastDoc);
-
-    const q = query(
-      songsCollection,
-      orderBy('modified_name'),
-      limit(maxPerPage.value),
-      startAfter(songRef)
-    );
-
-    snapshots = await getDocs(q);
+    apiSongs = await getSongsRequest(songs.value[songs.value.length - 1].docID);
   } else {
-    const q = query(
-      songsCollection,
-      orderBy('modified_name'),
-      limit(maxPerPage.value)
-    );
-
-    snapshots = await getDocs(q);
+    apiSongs = await getSongsRequest();
+    console.log(11, apiSongs);
   }
 
-  snapshots.forEach((doc) => {
-    songs.value.push({
-      ...doc.data(),
-      docID: doc.id,
-    });
-  });
+  songs.value = songs.value.concat(apiSongs);
 
   pendingRequest.value = false;
 };
