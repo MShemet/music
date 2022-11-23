@@ -5,7 +5,7 @@ import vIconSecondary from '@/directives/icon-secondary';
 
 import SongItem from '@/components/SongItem.vue';
 
-import { getSongsRequest } from './getSongsRequest';
+import { getSongsRequest } from '@/views/getSongsRequest';
 
 const { t } = useI18n();
 
@@ -25,7 +25,6 @@ const getSongs = async function getSongs() {
     apiSongs = await getSongsRequest(songs.value[songs.value.length - 1].docID);
   } else {
     apiSongs = await getSongsRequest();
-    console.log(11, apiSongs);
   }
 
   songs.value = songs.value.concat(apiSongs);
